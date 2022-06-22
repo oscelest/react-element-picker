@@ -42,7 +42,8 @@ function ElementPicker(props: ElementPickerProps) {
       if (selection_rect) {
         const rect = extendRectWithin(selection_rect, container, scroll.x, scroll.y);
         setSelectionRect(rect);
-        props.onHover?.(getElementListInRect(container, rect, props.select_threshold), rect);
+        // TODO: This needs to be changed
+        props.onHover?.(getSelectionFromElementAndRect(container, rect, [], false, props.select_threshold), rect);
       }
     }, 20));
 
@@ -63,7 +64,7 @@ function ElementPicker(props: ElementPickerProps) {
     setScrollSpeedX(x);
     setScrollSpeedY(y);
 
-    // Check if selection rect exists and if not, ensure there's a certain a certain distance 
+    // Check if selection rect exists and if not, ensure there's a certain distance
     // from origin point to current point, before creating the selection rect.
     const point = new Point(event.pageX, event.pageY).confineToElement(container);
     if (!ref_variables.current?.selection_rect && point.distanceToPoint(selection_point) < 8) return;
@@ -71,14 +72,15 @@ function ElementPicker(props: ElementPickerProps) {
     const rect = Rect.fromPoints(point, selection_point);
     setSelectionRect(rect);
 
-    const selection = getElementListInRect(container, rect, props.select_threshold);
+    // TODO: This needs to be changed
+    const selection = getSelectionFromElementAndRect(container, rect, [], false, props.select_threshold);
     if (ref_variables.current?.flag_ctrl) {
       // If ctrl is held, we will expand and negate truthy selections
-      selection.forEach((value, index) => {selection[index] = selection[index] || !props.selection?.[index]});
+      selection.forEach((value, index) => {selection[index] = selection[index] || !props.selection?.[index];});
     }
     else if (ref_variables.current?.flag_shift) {
       // If shift is held, we will expand selection
-      selection.forEach((value, index) => {selection[index] = selection[index] || !!props.selection?.[index]});
+      selection.forEach((value, index) => {selection[index] = selection[index] || !!props.selection?.[index];});
     }
     props.onHover?.(selection, rect);
   }, []);
@@ -109,70 +111,46 @@ function ElementPicker(props: ElementPickerProps) {
 
     if (ref_variables.current?.selection_rect) {
       // We have a drag selection
-      const selection = getElementListInRect(container, selection_rect, props.select_threshold);
+      // TODO: This needs to be changed
+      const selection = getSelectionFromElementAndRect(container, selection_rect, [], false, props.select_threshold);
       if (ref_variables.current?.flag_ctrl) {
         // If ctrl is held, we will expand and negate truthy selections
-        selection.forEach((value, index) => {selection[index] = selection[index] || !props.selection?.[index]});
+        selection.forEach((value, index) => {selection[index] = selection[index] || !props.selection?.[index];});
       }
       else if (ref_variables.current?.flag_shift) {
         // If shift is held, we will expand selection
-        selection.forEach((value, index) => {selection[index] = selection[index] || !!props.selection?.[index]});
+        selection.forEach((value, index) => {selection[index] = selection[index] || !!props.selection?.[index];});
       }
       props.onSelect?.(selection, selection_rect, event);
     }
     else {
-      // Performig a normal click
-      const selection = getEmptyList(container);
-      if (ref_variables.current?.flag_ctrl) {
-        getElementListInRect(container, selection_rect, props.select_threshold).forEach((value, index) => {selection[index] = !(props.selection?.[index] || !value) })
-      }
-      if (ref_variables.current?.flag_shift) {
-        for (let i = 0; i < container.children.length; i++) {
-          const child = container.children.item(i);
-          if (child && props.selection?.[i]) selection_rect.union(child.getBoundingClientRect());
-        }
-      }
+      // Performing a normal click
+      if (ref_variables.current?.flag_ctrl && ref_variables.current?.flag_shift) {
+        const focus = container.children.item(props.focus ?? 0);
+        if (!focus) throw new Error("Focussed element does not exist.");
 
+        const cursor_rect = Rect.fromPoints(selection_point, Point.fromEventPage(event).confineToElement(container));
+        const cursor_selection = getSelectionFromElementAndRect(container, cursor_rect, [], false, props.select_threshold).reduce((r, v, i) => v ? [...r, i] : r, [] as number[]);
+        props.onClick?.(cursor_selection, cursor_rect, event);
 
-      if (ref_variables.current?.flag_shift) {
-        // Shift and ctrl is held - Expand selection to include current selection 
-        // and select all elements in the greater selection
-        for (let i = 0; i < container.children.length; i++) {
-          const child = container.children.item(i);
-          if (child) selection_rect.union(child.getBoundingClientRect());
-        }
-        const selection = getElementListInRect(container, selection_rect, props.select_threshold);
+        const selection_rect = Rect.union(cursor_rect, focus.getBoundingClientRect());
+        const selection = getSelectionFromElementAndRect(container, selection_rect, props.selection, false, props.select_threshold);
         props.onSelect?.(selection, selection_rect, event);
       }
-      if (ref_variables.current?.flag_shift) {
-        // Shift is held - Find the focus and select everything 
-        const focus = props.focus ?? 0;
-        const element = container.children.item(focus);
-        if (!element) throw new Error("Could not find focused element.");
-        selection_rect.union(element.getBoundingClientRect());
-        const selection = getElementListInRect(container, selection_rect, props.select_threshold);
-        props.onSelect?.(selection, selection_rect, event);
+      else if (ref_variables.current?.flag_ctrl) {
+
+
       }
-      if (props.selection && flag_ctrl) {
-        const selection = getElementListInRect(container, selection_rect, props.select_threshold).reduce(
-          (result, value, index) => {
-            result[index] = value || result[index];
-            return result;
-          },
-          [] as boolean[]
-        );
-        props.onSelect?.(selection, selection_rect, event);
+      else if (ref_variables.current?.flag_ctrl) {
+
+
+      }
+      else {
+
       }
 
-      if (props.selection && flag_shift) {
-        // If we already have a selection, 
-
-        const selection = getElementListInRect(container, selection_rect, props.select_threshold);
-      }
     }
 
-    props.onSelect?.(element_list, selection_rect, event);
-    if (!ref_variables.current?.selection_rect) props.onClick?.(element_list.findIndex(value => value), selection_rect, event);
   }, []);
 
   const position_rect = {} as ElementPickerRectCSSProperties & CSSProperties;
@@ -192,6 +170,7 @@ function ElementPicker(props: ElementPickerProps) {
     </div>
   );
 }
+
 
 function getScrollSpeed(rect: DOMRect, cursor: Point, coefficient: number = 15): {x: number, y: number} {
   const speed = {x: 0, y: 0};
@@ -244,22 +223,24 @@ function scrollElementBy(element: HTMLElement, left: number, top: number): {x: n
   return {x, y};
 }
 
-function getElementListInRect(element: HTMLElement, rect: Rect, threshold: number = 0.2): boolean[] {
-  threshold = Math.min(1, Math.max(0, threshold)) / 2;
+function getSelectionFromElementAndRect(element: HTMLElement, rect: Rect, current_selection: boolean[] = [], inverse: boolean = false, threshold: number = 0.2) {
+  threshold = Math.min(1, Math.max(0, threshold));
 
-  const element_list = [] as boolean[];
-  const {children, offsetLeft, offsetTop, clientLeft, clientTop, scrollLeft, scrollTop} = element;
-  for (let i = 0; i < children.length; i++) {
-    const child = children.item(i);
-    if (!child) continue;
-
-    const {left, top, width, height} = child.getBoundingClientRect();
-    const x = left - offsetLeft - clientLeft + scrollLeft + threshold * width;
-    const y = top - offsetTop - clientTop + scrollTop + threshold * height;
-    element_list.push(rect.intersectsRect(new Rect(x, y, width - threshold * width * 2, height - threshold * height * 2)));
+  const list = [] as boolean[];
+  for (let i = 0; i < element.children.length; i++) {
+    const child = element.children.item(i);
+    if (child) {
+      const {left, top, width, height} = child.getBoundingClientRect();
+      if (rect.intersectsRect(new Rect(left, top, width, height).relateToElement(element).scale(1 - threshold))) {
+        list[i] = inverse ? !!current_selection.at(i) : true;
+      }
+    }
+    else {
+      list[i] = false;
+    }
   }
 
-  return element_list;
+  return list;
 }
 
 function getEmptyList(element: HTMLElement) {
@@ -292,13 +273,13 @@ export interface ElementPickerProps extends React.PropsWithChildren {
   scroll_coefficient?: number;
 
   focus?: number;
-  selection?: boolean[]
+  selection?: boolean[];
   style?: {
     border?: Property.Border
     background?: Property.Background
   };
 
-  onClick?(values: number | undefined, rect: Rect, event: MouseEvent): void;
+  onClick?(values: number[], rect: Rect, event: MouseEvent): void;
   onHover?(values?: boolean[], rect?: Rect): void;
   onSelect?(values: boolean[], rect: Rect, event: MouseEvent): void;
 }
