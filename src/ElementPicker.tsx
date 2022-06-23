@@ -42,8 +42,7 @@ function ElementPicker(props: ElementPickerProps) {
       if (selection_rect) {
         const rect = extendRectWithin(selection_rect, container, scroll.x, scroll.y);
         setSelectionRect(rect);
-        // TODO: This needs to be changed
-        props.onHover?.(getSelectionFromElementAndRect(container, rect, [], false, props.select_threshold), rect);
+        props.onHover?.(getSelectionFromElementAndRect(container, rect, [], event.ctrlKey, props.select_threshold), rect);
       }
     }, 20));
 
@@ -71,18 +70,7 @@ function ElementPicker(props: ElementPickerProps) {
 
     const rect = Rect.fromPoints(point, selection_point);
     setSelectionRect(rect);
-
-    // TODO: This needs to be changed
-    const selection = getSelectionFromElementAndRect(container, rect, [], false, props.select_threshold);
-    if (ref_variables.current?.flag_ctrl) {
-      // If ctrl is held, we will expand and negate truthy selections
-      selection.forEach((value, index) => {selection[index] = selection[index] || !props.selection?.[index];});
-    }
-    else if (ref_variables.current?.flag_shift) {
-      // If shift is held, we will expand selection
-      selection.forEach((value, index) => {selection[index] = selection[index] || !!props.selection?.[index];});
-    }
-    props.onHover?.(selection, rect);
+    props.onHover?.(getSelectionFromElementAndRect(container, rect, props.selection, ref_variables.current?.flag_ctrl, props.select_threshold), rect);
   }, []);
 
   const onMouseUp = useCallback((event: MouseEvent) => {
@@ -95,62 +83,46 @@ function ElementPicker(props: ElementPickerProps) {
     setScrollSpeedY(0);
     setFlagCtrl(false);
     setFlagShift(false);
+    setSelectionRect(undefined);
+    setSelectionPoint(undefined);
+    props.onHover?.();
 
     // Initialization to ensure variables exist in current context
     const {current: container} = ref_container;
-    if (!container) throw new Error("Reference element does not exist. No element to select inside.");
+    if (!container) throw new Error("Reference element has not been initialized.");
+    if (!ref_variables.current) throw new Error("Variable object has not been initialized.");
 
-    const selection_point = ref_variables.current?.selection_point;
+    const {flag_ctrl, flag_shift, selection_point, selection_rect} = ref_variables.current;
     if (!selection_point) throw new Error("Selection point has not been created before window.onMouseUp event was triggered.");
-    setSelectionPoint(undefined);
 
     // Calculate final selection rect, clear current selection rect and hover list.
-    const selection_rect = ref_variables.current?.selection_rect ?? Rect.fromPoints(selection_point, Point.fromEventPage(event).confineToElement(container));
-    props.onHover?.();
-    setSelectionRect(undefined);
+    let current_rect = selection_rect ?? Rect.fromPoints(selection_point, Point.fromEventPage(event).confineToElement(container));
 
-    if (ref_variables.current?.selection_rect) {
+    if (selection_rect) {
       // We have a drag selection
       // TODO: This needs to be changed
-      const selection = getSelectionFromElementAndRect(container, selection_rect, [], false, props.select_threshold);
-      if (ref_variables.current?.flag_ctrl) {
-        // If ctrl is held, we will expand and negate truthy selections
-        selection.forEach((value, index) => {selection[index] = selection[index] || !props.selection?.[index];});
-      }
-      else if (ref_variables.current?.flag_shift) {
-        // If shift is held, we will expand selection
-        selection.forEach((value, index) => {selection[index] = selection[index] || !!props.selection?.[index];});
-      }
+      const selection = getSelectionFromElementAndRect(container, selection_rect, [], flag_ctrl, props.select_threshold);
       props.onSelect?.(selection, selection_rect, event);
     }
     else {
       // Performing a normal click
-      if (ref_variables.current?.flag_ctrl && ref_variables.current?.flag_shift) {
+      const cursor_selection = getSelectionFromElementAndRect(container, current_rect, [], false, props.select_threshold)
+      const cursor_focus = cursor_selection.reduce((result, value, index) => value ? [...result, index] : result, [] as number[]);
+      props.onClick?.(cursor_focus, current_rect, event);
+
+      let current_selection = flag_ctrl && props.selection ? [...props.selection] : []
+      if (flag_shift) {
         const focus = container.children.item(props.focus ?? 0);
-        if (!focus) throw new Error("Focussed element does not exist.");
+        if (!focus) throw new Error("Focused element does not exist.");
 
-        const cursor_rect = Rect.fromPoints(selection_point, Point.fromEventPage(event).confineToElement(container));
-        const cursor_selection = getSelectionFromElementAndRect(container, cursor_rect, [], false, props.select_threshold).reduce((r, v, i) => v ? [...r, i] : r, [] as number[]);
-        props.onClick?.(cursor_selection, cursor_rect, event);
-
-        const selection_rect = Rect.union(cursor_rect, focus.getBoundingClientRect());
-        const selection = getSelectionFromElementAndRect(container, selection_rect, props.selection, false, props.select_threshold);
-        props.onSelect?.(selection, selection_rect, event);
-      }
-      else if (ref_variables.current?.flag_ctrl) {
-
-
-      }
-      else if (ref_variables.current?.flag_ctrl) {
-
-
+        current_rect = Rect.union(current_rect, focus.getBoundingClientRect());
+        current_selection = getSelectionFromElementAndRect(container, current_rect, current_selection, flag_ctrl, props.select_threshold);
+        props.onSelect?.(current_selection, current_rect, event);
       }
       else {
-
+        props.onSelect?.(cursor_selection, current_rect, event);
       }
-
     }
-
   }, []);
 
   const position_rect = {} as ElementPickerRectCSSProperties & CSSProperties;
@@ -241,10 +213,6 @@ function getSelectionFromElementAndRect(element: HTMLElement, rect: Rect, curren
   }
 
   return list;
-}
-
-function getEmptyList(element: HTMLElement) {
-  return Array(element.children.length).fill(false);
 }
 
 interface Reference {
