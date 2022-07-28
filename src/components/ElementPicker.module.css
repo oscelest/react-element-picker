@@ -1,0 +1,25 @@
+:root .Component {
+  --selection-rect-display: none;
+  --selection-rect-top:     0px;
+  --selection-rect-left:    0px;
+  --selection-rect-width:   0px;
+  --selection-rect-height:  0px;
+}
+
+.Component:global(.element-picker) {
+  user-select: none;
+  overflow:    auto;
+}
+
+.Component:global(.element-picker::before) {
+  content:    " ";
+  position:   absolute;
+  box-sizing: border-box;
+  display:    var(--selection-rect-display);
+  top:        var(--selection-rect-top);
+  left:       var(--selection-rect-left);
+  width:      var(--selection-rect-width);
+  height:     var(--selection-rect-height);
+  border:     1px solid rgba(0, 0, 0, 0.4);
+  background: rgba(0, 0, 0, 0.2);
+}

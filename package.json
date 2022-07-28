@@ -1,18 +1,50 @@
 {
-  "name": "@noxy/element-picker",
-  "version": "0.0.1",
-  "private": true,
-  "scripts": {
+  "name":             "@noxy/react-element-picker",
+  "author":           "oscelest",
+  "version":          "0.4.4",
+  "description":      "A tool for turning elements inside a container selectable in a file explorer style.",
+  "license":          "MIT",
+  "repository":       {
+    "type": "git",
+    "url":  "git@github.com:oscelest/react-element-picker.git"
+  },
+  "bugs":             {
+    "url": "https://github.com/oscelest/react-element-picker/issues"
+  },
+  "publishConfig":    {
+    "access": "public"
+  },
+  "main":             "dist/cjs/index.js",
+  "types":            "dist/types/index.d.ts",
+  "module":           "dist/esm/index.js",
+  "umd":              "dist/umd/index.js",
+  "files":            [
+    "dist"
+  ],
+  "scripts":          {
+    "update":   "npx npm-check-updates -u && npm i",
+    "build":    "rollup -c",
     "test:app": "next dev"
   },
-  "devDependencies": {
-    "@types/node": "^18.0.0",
-    "@types/react": "^18.0.14",
-    "@types/react-dom": "^18.0.5",
-    "next": "^12.1.6",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "sass": "^1.52.3",
-    "typescript": "^4.7.4"
+  "dependencies":     {
+    "@noxy/geometry": "^0.1.6"
+  },
+  "devDependencies":  {
+    "@rollup/plugin-commonjs":          "^22.0.1",
+    "@rollup/plugin-node-resolve":      "^13.3.0",
+    "@rollup/plugin-typescript": "^8.3.4",
+    "@types/react":                     "^18.0.15",
+    "@types/react-dom":                 "^18.0.6",
+    "next":                             "^12.2.3",
+    "react-dom":                        "^18.2.0",
+    "rollup":                           "^2.77.2",
+    "rollup-plugin-dts":                "^4.2.2",
+    "rollup-plugin-peer-deps-external": "^2.2.4",
+    "rollup-plugin-postcss":            "^4.0.2",
+    "rollup-plugin-terser":             "^7.0.2",
+    "typescript":                       "^4.7.4"
+  },
+  "peerDependencies": {
+    "react": "^18.2.0"
   }
 }

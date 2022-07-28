@@ -25,3 +25,17 @@
 .Hovered {
   box-shadow: 0 0 1px 5px #0dc913;
 }
+
+.ElementPicker {
+  display: flex;
+  flex: 0 0 auto;
+  flex-flow: row wrap;
+  grid-row-gap: 10px;
+  grid-column-gap: 10px;
+  width: 90%;
+  height: 500px;
+  position: relative;
+  padding: 10px;
+  margin: 10px auto;
+  border: 5px solid black;
+}
