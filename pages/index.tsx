@@ -25,16 +25,21 @@ const IndexPage: NextPage = () => {
   }
 
   return (
-    <ElementPicker className={Style.ElementPicker} onCommit={onCommit} onHover={onHover} onClick={onClick}>
+    <ElementPicker className={Style.ElementPicker} selection={selected} onCommit={onCommit} onHover={onHover} onClick={onClick}>
       {element_list.map((value, index) => {
         const className = [Style.Large];
-        // if (focused === index) className.push(Style.Focused);
-        if (selected[index]) {
-          className.push(Style.Selected);
+        if (selected[index] && !hovered[index]) {
+          className.push(Style.Deselected);
         }
-        else if (hovered[index]) {
-          className.push(Style.Hovered);
+        else {
+          if (selected[index]) {
+            className.push(Style.Selected);
+          }
+          if (hovered[index]) {
+            className.push(Style.Hovered);
+          }
         }
+
         return (
           <div className={className.join(" ")} key={index}>{index}</div>
         );
