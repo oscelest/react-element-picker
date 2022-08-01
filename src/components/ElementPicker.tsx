@@ -98,7 +98,7 @@ function ElementPicker(props: ElementPickerProps) {
         if (!ref_container.current) return removeListeners();
         if (!ref_rect.current || !ref_scroll.current) return;
         const scroll = ref_scroll.current;
-        const {scrollLeft, scrollWidth, offsetWidth, scrollTop, scrollHeight, offsetHeight} = ref_container.current
+        const {scrollLeft, scrollWidth, scrollTop, scrollHeight} = ref_container.current
 
         if (!scroll.x && !scroll.y) return;
         ref_container.current.scrollBy(ref_scroll.current.x, ref_scroll.current.y);
