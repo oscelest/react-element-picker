@@ -5,23 +5,26 @@ import {Rect, Point} from "@noxy/geometry";
 import Utility from "../modules/Utility";
 
 function ElementPicker(props: ElementPickerProps) {
-  const {className, style = {}, selection = [], config, ...component_method_props} = props;
-  const {onClick, onHover, onCommit, onMouseDown, ...component_props} = component_method_props;
-  const {clickThreshold = 8, scrollSpeed = 100, scrollUpdateRate = 5} = config ?? {};
+  const {className, style = {}, selection, config, ...component_method_props} = props;
+  const {onClick, onHover, onCommit, onMouseDown, onMouseEnter, onMouseLeave, ...component_props} = component_method_props;
+  const {clickThreshold = 8, scrollSpeed = 2500} = config ?? {};
 
-  const [internal_selection, setInternalSelection] = useState<boolean[]>(selection);
   const [selection_rect, setSelectionRect] = useState<Rect>();
-  const [scroll_timer, setScrollTimer] = useState<number>();
+  const [internal_selection, setInternalSelection] = useState<boolean[]>(selection ?? []);
 
-  const ref_selection = useRef<boolean[]>(internal_selection);
   const ref_container = useRef<HTMLDivElement>(null);
+  const ref_selection = useRef<boolean[]>(internal_selection);
+
   const ref_rect = useRef<Rect>();
   const ref_point = useRef<Point>();
   const ref_scroll = useRef<Point>();
-  const ref_shift = useRef<boolean>(false);
-  const ref_ctrl = useRef<boolean>(false);
+  const ref_origin = useRef<Point>();
+  const ref_interval = useRef<{id: number, elapsed: number}>({id: 0, elapsed: 0});
 
-  useEffect(() => Utility.setState(setInternalSelection, ref_selection.current = props.selection!), [props.selection]);
+  const ref_ctrl = useRef<boolean>(false);
+  const ref_shift = useRef<boolean>(false);
+
+  useEffect(() => selection && setInternalSelection(ref_selection.current = selection), [selection]);
 
   if (selection_rect) {
     style["--selection-rect-display"] = "block";
@@ -35,38 +38,50 @@ function ElementPicker(props: ElementPickerProps) {
   if (className) classes.push(className);
 
   return (
-    <div {...component_props} ref={ref_container} className={classes.join(" ")} style={style} onMouseDown={onComponentMouseDown}>
+    <div {...component_props} ref={ref_container} className={classes.join(" ")} style={style}
+         onMouseDown={onComponentMouseDown} onMouseEnter={onComponentMouseEnter} onMouseLeave={onComponentMouseLeave}>
       {props.children}
     </div>
   );
+
+  function onComponentMouseEnter(event: React.MouseEvent<HTMLDivElement>) {
+    if (ref_interval.current) cancelAnimationFrame(ref_interval.current.id);
+    onMouseEnter?.(event);
+    if (event.defaultPrevented) return;
+  }
+
+  function onComponentMouseLeave(event: React.MouseEvent<HTMLDivElement>) {
+    onMouseEnter?.(event);
+    if (event.defaultPrevented || !ref_container.current || !ref_origin.current || !ref_point.current || !ref_rect.current) return;
+    ref_scroll.current = new Point(0, 0);
+    ref_interval.current = {id: requestAnimationFrame(onInterval), elapsed: performance.now()};
+  }
 
   function onComponentMouseDown(event: React.MouseEvent<HTMLDivElement>) {
     onMouseDown?.(event);
     if (event.defaultPrevented || event.button !== 0 || !ref_container.current) return;
 
-    ref_shift.current = event.shiftKey;
     ref_ctrl.current = event.ctrlKey;
-    ref_point.current = Utility.getRelativePoint(ref_container.current, Utility.getPointFromEvent(event));
+    ref_shift.current = event.shiftKey;
+    ref_origin.current = Utility.getRelativePoint(ref_container.current, Utility.getPointFromEvent(event));
 
-    setScrollTimer(window.setInterval(onInterval, Math.round(1000 / scrollUpdateRate)));
     window.addEventListener("mouseup", onWindowMouseUp);
     window.addEventListener("mousemove", onWindowMouseMove);
   }
 
   function onWindowMouseMove(event: MouseEvent) {
-    if (!ref_container.current || !ref_point.current) return removeListeners();
+    if (!ref_container.current || !ref_origin.current) return removeListeners();
 
-    const point = Utility.getPointFromEvent(event);
-    ref_scroll.current = Utility.getScrollPoint(ref_container.current, point, Math.round(1 / scrollUpdateRate * scrollSpeed));
-
-    const rect_point = Utility.getRelativePoint(ref_container.current, point);
-    const distance = ref_point.current.getDistanceToPoint(rect_point);
-    if (ref_rect.current || distance > clickThreshold) hover(Rect.fromPoints(rect_point, ref_point.current));
+    ref_point.current = Utility.getPointFromEvent(event);
+    const rect_point = Utility.getRelativePoint(ref_container.current, ref_point.current);
+    const distance = ref_origin.current.getDistanceToPoint(rect_point);
+    if (ref_rect.current || distance > clickThreshold) hover(Rect.fromPoints(ref_origin.current, rect_point));
   }
 
   function onWindowMouseUp() {
     removeListeners();
     if (!ref_container.current) return;
+
     // If there is a rect, we're performing a drag selection
     if (ref_rect.current) {
       const rect = Utility.getRelativeRect(ref_container.current, ref_rect.current);
@@ -74,51 +89,62 @@ function ElementPicker(props: ElementPickerProps) {
       commit(selection, rect);
     }
     // If there is a point but no rect, we're performing a click
-    else if (ref_point.current) {
-      const rect = Utility.getRelativeRect(ref_container.current, new Rect(ref_point.current.x, ref_point.current.y, 0, 0));
+    else if (ref_origin.current) {
+      const rect = Utility.getRelativeRect(ref_container.current, new Rect(ref_origin.current.x, ref_origin.current.y, 0, 0));
       const selection = Utility.getClickSelection(ref_container.current.children, rect, ref_selection.current, ref_ctrl.current, ref_shift.current);
       commit(selection, rect);
     }
-    hover();
 
+    hover();
     ref_ctrl.current = false;
     ref_shift.current = false;
     ref_rect.current = undefined;
     ref_point.current = undefined;
+    ref_origin.current = undefined;
     ref_scroll.current = undefined;
     setSelectionRect(undefined);
   }
 
-  function onInterval() {
-    if (!ref_container.current) return removeListeners();
-    if (!ref_rect.current || !ref_scroll.current) return;
-    const scroll = ref_scroll.current;
-    const {scrollLeft, scrollWidth, scrollTop, scrollHeight} = ref_container.current;
+  function onInterval(elapsed: number) {
+    if (!ref_container.current || !ref_origin.current || !ref_point.current || !ref_scroll.current) return removeListeners();
+    const updateRate = 1000 / (elapsed - ref_interval.current.elapsed);
+    const {current: scroll} = ref_scroll;
+    const {scrollLeft, scrollWidth, clientWidth, scrollTop, scrollHeight, clientHeight} = ref_container.current;
+    const {left, top, width, height} = ref_container.current.getBoundingClientRect();
+    const {x, y} = ref_point.current;
 
-    if (!scroll.x && !scroll.y) return;
-    ref_container.current.scrollBy(ref_scroll.current.x, ref_scroll.current.y);
-    scroll.x = ref_container.current.scrollLeft - scrollLeft;
-    scroll.y = ref_container.current.scrollTop - scrollTop;
-
-    const rect = Rect.fromSimpleRect(ref_rect.current);
-    if (scroll.x < 0) {
-      const dx = rect.x + scroll.x < 0 ? -rect.x : scroll.y;
-      rect.x += dx;
-      rect.width -= dx;
+    if (x < left && scrollLeft > 0) {
+      scroll.x += scrollSpeed / updateRate * Math.tanh(x / 100);
+    }
+    else if (x > left + width && scrollLeft + clientWidth < scrollWidth) {
+      scroll.x += scrollSpeed / updateRate * Math.tanh((x - left - width) / 100);
     }
     else {
-      rect.width = Math.min(scrollWidth - rect.x, rect.x + rect.width + scroll.x);
+      scroll.x = 0;
     }
 
-    if (scroll.y < 0) {
-      const dy = rect.y + scroll.y < 0 ? -rect.y : scroll.y;
-      rect.y += dy;
-      rect.height -= dy;
+    if (y < top && scrollTop > 0) {
+      scroll.y += scrollSpeed / updateRate * Math.tanh(y / 100);
+    }
+    else if (y > top + height && scrollTop + clientHeight < scrollHeight) {
+      scroll.y += scrollSpeed / updateRate * Math.tanh((y - top - height) / 100);
     }
     else {
-      rect.height = Math.min(scrollHeight - rect.y, rect.y + rect.height + scroll.y);
+      scroll.y = 0;
     }
-    hover(rect);
+
+    if (scroll.y !== 0 || scroll.x !== 0) {
+      const sx = Math.floor(scroll.x);
+      const sy = Math.floor(scroll.y);
+
+      scroll.x -= sx;
+      scroll.y -= sy;
+      ref_container.current.scrollBy(sx, sy);
+      hover(Rect.fromPoints(ref_origin.current, Utility.getRelativePoint(ref_container.current, Point.translateByCoords(ref_point.current, sx, sy))));
+    }
+
+    ref_interval.current.elapsed = elapsed;
+    ref_interval.current.id = requestAnimationFrame(onInterval);
   }
 
   function hover(rect?: Rect) {
@@ -138,12 +164,11 @@ function ElementPicker(props: ElementPickerProps) {
   }
 
   function removeListeners() {
-    window.clearInterval(scroll_timer);
+    if (ref_interval.current) cancelAnimationFrame(ref_interval.current.id);
     window.removeEventListener("mousemove", onWindowMouseMove);
     window.removeEventListener("mouseup", onWindowMouseUp);
   }
 }
-
 
 export interface ElementPickerRectCSSProperties {
   "--selection-rect-display"?: Property.Display;
@@ -155,7 +180,6 @@ export interface ElementPickerRectCSSProperties {
 
 export interface ElementPickerConfig {
   clickThreshold?: number;
-  scrollUpdateRate?: number;
   scrollSpeed?: number;
 }
 

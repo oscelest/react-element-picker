@@ -7,15 +7,15 @@ import {ElementPicker} from "../src";
 const IndexPage: NextPage = () => {
 
   const [element_list, setElementList] = useState<Array<undefined>>(Array(5).fill(undefined));
-  const [hovered, setHovered] = useState<boolean[]>([]);
-  const [selected, setSelected] = useState<boolean[]>([]);
+  const [hovered, setHovered] = useState<boolean[]>();
+  const [selected, setSelected] = useState<boolean[]>();
   const [focused, setFocused] = useState<number[]>();
 
   function onCommit(values: boolean[], rect?: Rect) {
     setSelected(values);
   }
 
-  function onHover(values: boolean[], rect?: Rect) {
+  function onHover(values?: boolean[], rect?: Rect) {
     setHovered(values);
     // console.log("Hover", values);
   }
@@ -28,14 +28,14 @@ const IndexPage: NextPage = () => {
     <ElementPicker className={Style.ElementPicker} selection={selected} onCommit={onCommit} onHover={onHover} onClick={onClick}>
       {element_list.map((value, index) => {
         const className = [Style.Large];
-        if (selected[index] && !hovered[index]) {
+        if (selected?.[index] && !hovered?.[index]) {
           className.push(Style.Deselected);
         }
         else {
-          if (selected[index]) {
+          if (selected?.[index]) {
             className.push(Style.Selected);
           }
-          if (hovered[index]) {
+          if (hovered?.[index]) {
             className.push(Style.Hovered);
           }
         }
