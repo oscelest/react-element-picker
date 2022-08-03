@@ -5,7 +5,7 @@ import {Rect} from "@noxy/geometry";
 import {ElementPicker} from "../src";
 
 const IndexPage: NextPage = () => {
-  const element_list = useState<Array<undefined>>(Array(5).fill(undefined));
+  const element_list = Array(5).fill(undefined);
   const [hovered, setHovered] = useState<boolean[]>();
   const [selected, setSelected] = useState<boolean[]>();
 
