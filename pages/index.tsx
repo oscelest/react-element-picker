@@ -5,11 +5,9 @@ import {Rect} from "@noxy/geometry";
 import {ElementPicker} from "../src";
 
 const IndexPage: NextPage = () => {
-
-  const [element_list, setElementList] = useState<Array<undefined>>(Array(5).fill(undefined));
+  const element_list = useState<Array<undefined>>(Array(5).fill(undefined));
   const [hovered, setHovered] = useState<boolean[]>();
   const [selected, setSelected] = useState<boolean[]>();
-  const [focused, setFocused] = useState<number[]>();
 
   function onCommit(values: boolean[], rect?: Rect) {
     setSelected(values);
@@ -17,15 +15,10 @@ const IndexPage: NextPage = () => {
 
   function onHover(values?: boolean[], rect?: Rect) {
     setHovered(values);
-    // console.log("Hover", values);
-  }
-
-  function onClick(value?: number[], rect?: Rect) {
-    setFocused(value);
   }
 
   return (
-    <ElementPicker className={Style.ElementPicker} selection={selected} onCommit={onCommit} onHover={onHover} onClick={onClick}>
+    <ElementPicker className={Style.ElementPicker} selection={selected} onCommit={onCommit} onHover={onHover}>
       {element_list.map((value, index) => {
         const className = [Style.Large];
         if (selected?.[index] && !hovered?.[index]) {

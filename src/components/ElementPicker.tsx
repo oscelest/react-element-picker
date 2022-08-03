@@ -184,14 +184,13 @@ export interface ElementPickerConfig {
 }
 
 type ElementPickerBaseProps = Omit<React.HTMLAttributes<HTMLDivElement>, OmittedElementPickerBaseProps>;
-type OmittedElementPickerBaseProps = "onClick" | "style"
+type OmittedElementPickerBaseProps = "style"
 
 export interface ElementPickerProps extends ElementPickerBaseProps {
   config?: ElementPickerConfig;
   selection?: boolean[];
   style?: React.CSSProperties & ElementPickerRectCSSProperties;
 
-  onClick?(values: number[], rect: Rect): void;
   onHover?(values?: boolean[], rect?: Rect): void;
   onCommit?(values: boolean[], rect?: Rect): void;
 }
