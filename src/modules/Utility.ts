@@ -1,11 +1,7 @@
 import React from "react";
-import {Point, Rect, SimpleRect, SimplePoint} from "@noxy/geometry";
+import {Point, Rect, SimpleRect, SimplePoint, TransformationOrigin} from "@noxy/geometry";
 
 module Utility {
-
-  export function setState<T>(fn: (value: T) => void, value: T | undefined) {
-    if (value !== undefined) fn(value);
-  }
 
   export function getPointFromEvent(event: React.MouseEvent | MouseEvent) {
     return new Point(event.pageX, event.pageY);
@@ -19,37 +15,70 @@ module Utility {
       .clampY(0, scrollHeight);
   }
 
-  export function getScrollPoint<T extends HTMLElement>(container: T, point: SimplePoint, speed: number = 20) {
-    const {clientLeft, clientWidth, clientTop, clientHeight} = container;
-    const {top, left} = container.getBoundingClientRect();
-    const dx = point.x - left - clientLeft;
-    const dy = point.y - top - clientTop;
-    return new Point(getSpeed(dx, dx - clientWidth, speed), getSpeed(dy, dy - clientHeight, speed));
-  }
-
-  function getSpeed(min: number, max: number, speed: number) {
-    return Math.ceil(Math.tanh(Math.max(Math.min(0, min), max) / 100) * speed);
-  }
-
   export function getRelativeRect<T extends HTMLElement>(container: T, rect: SimpleRect) {
     const {scrollLeft, scrollTop, clientLeft, clientTop} = container;
     const {left, top} = container.getBoundingClientRect();
     return Rect.translateByCoords(rect, left + clientLeft - scrollLeft, top + clientTop - scrollTop);
   }
 
-  export function getEmptySelection<T extends HTMLElement>(container: T): boolean[] {
-    return Array(container.children.length).fill(false);
+  export function getFocusSelectionRect(rect: SimpleRect, code: string) {
+    switch (code) {
+      case "ArrowUp":
+        return new Rect(rect.x, 0, rect.width, rect.y + rect.height);
+      case "ArrowDown":
+        return new Rect(rect.x, rect.y, rect.width, Infinity);
+      case "ArrowLeft":
+        return new Rect(0, rect.y, rect.x + rect.width, rect.height);
+      case "ArrowRight":
+        return new Rect(rect.x, rect.y, Infinity, rect.height);
+    }
   }
 
-  export function getRectSelection<T extends HTMLElement>(container: T, rect: Rect, selection: boolean[], ctrl: boolean = false): boolean[] {
-    selection = selection.slice(0, container.children.length);
-    for (let i = 0; i < container.children.length; i++) {
-      const child = container.children.item(i);
-      const intersection = !!(child && rect.intersectsRect(child.getBoundingClientRect()));
-      selection[i] = !ctrl !== !intersection;
-    }
-    return selection;
-  }
+  // export function getCursorSelectionAndFocus<T extends HTMLElement>(container: T, focus_element: Element, rect: SimpleRect, selection: boolean[], ctrl: boolean, shift: boolean) {
+  //
+  //
+  //   selection = selection.slice(0, children.length);
+  //
+  //   const focus = {element: focus_element, distance: shift ? -Infinity : Infinity};
+  //   const center = Rect.getCenterPoint(focus_element.getBoundingClientRect());
+  //
+  //   const focus_rect = rect;
+  //   const selection_rect = rect.clone();
+  //
+  //   // if (ctrl && shift) {
+  //   //   selection_rect.union(...Array.from(children).reduce(
+  //   //     (result, child, index) => selection[index] ? [...result, child.getBoundingClientRect()] : result,
+  //   //     [] as SimpleRect[]
+  //   //   ));
+  //   // }
+  //
+  //   for (let i = 0; i < children.length; i++) {
+  //     const child = children.item(i);
+  //     if (!child) {
+  //       selection[i] = false;
+  //       continue;
+  //     }
+  //
+  //     const child_rect = child.getBoundingClientRect();
+  //     selection[i] = (ctrl && selection[i]) || selection_rect.intersectsRect(child_rect);
+  //
+  //     if (child !== focus_element && focus_rect.intersectsRect(child_rect)) {
+  //       const distance = center.getDistanceToPoint(Rect.getCenterPoint(child.getBoundingClientRect()));
+  //
+  //       if (!shift && distance < focus.distance) {
+  //         focus.element = child;
+  //         focus.distance = distance;
+  //       }
+  //
+  //       if (shift && distance > focus.distance) {
+  //         focus.element = child;
+  //         focus.distance = distance;
+  //       }
+  //     }
+  //   }
+  //
+  //   return {focus: focus.element, selection};
+  // }
 
   export function getClickSelection(children: HTMLCollection, rect: Rect, selection: boolean[], ctrl: boolean, shift: boolean) {
     selection = selection.slice(0, children.length);
@@ -66,10 +95,10 @@ module Utility {
       rect = Rect.union(rect, ...rect_list);
     }
 
-    return getSelection(children, rect, selection, ctrl, shift);
+    return getDragSelection(children, rect, selection, ctrl, shift);
   }
 
-  export function getSelection(children: HTMLCollection, rect: Rect, selection: boolean[], ctrl: boolean, shift: boolean) {
+  export function getDragSelection(children: HTMLCollection, rect: Rect, selection: boolean[], ctrl: boolean, shift: boolean) {
     selection = selection.slice(0, children.length);
     for (let i = 0; i < children.length; i++) {
       const child = children.item(i);

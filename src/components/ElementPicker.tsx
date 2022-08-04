@@ -1,15 +1,16 @@
 import Style from "./ElementPicker.module.css";
 import React, {useRef, useState, useEffect} from "react";
 import {Property} from "csstype";
-import {Rect, Point} from "@noxy/geometry";
+import {Rect, Point, SimpleRect} from "@noxy/geometry";
 import Utility from "../modules/Utility";
 
 function ElementPicker(props: ElementPickerProps) {
-  const {className, style = {}, selection, config, ...component_method_props} = props;
-  const {onClick, onHover, onCommit, onMouseDown, onMouseEnter, onMouseLeave, ...component_props} = component_method_props;
+  const {className, selection, focus, config, tabIndex = -1, style = {}, ...component_method_props} = props;
+  const {onHover, onCommit, onKeyDown, onMouseDown, onMouseEnter, onMouseLeave, ...component_props} = component_method_props;
   const {clickThreshold = 8, scrollSpeed = 2500} = config ?? {};
 
   const [selection_rect, setSelectionRect] = useState<Rect>();
+  const [internal_focus, setInternalFocus] = useState<number>(0);
   const [internal_selection, setInternalSelection] = useState<boolean[]>(selection ?? []);
 
   const ref_container = useRef<HTMLDivElement>(null);
@@ -19,12 +20,14 @@ function ElementPicker(props: ElementPickerProps) {
   const ref_point = useRef<Point>();
   const ref_scroll = useRef<Point>();
   const ref_origin = useRef<Point>();
-  const ref_interval = useRef<{id: number, elapsed: number}>({id: 0, elapsed: 0});
+  const ref_interval_id = useRef<number>(0);
+  const ref_interval_offset = useRef<number>(0);
 
   const ref_ctrl = useRef<boolean>(false);
   const ref_shift = useRef<boolean>(false);
 
-  useEffect(() => selection && setInternalSelection(ref_selection.current = selection), [selection]);
+  useEffect(() => { focus !== undefined && setInternalFocus(focus); }, [focus]);
+  useEffect(() => { selection !== undefined && setInternalSelection(ref_selection.current = selection); }, [selection]);
 
   if (selection_rect) {
     style["--selection-rect-display"] = "block";
@@ -38,14 +41,148 @@ function ElementPicker(props: ElementPickerProps) {
   if (className) classes.push(className);
 
   return (
-    <div {...component_props} ref={ref_container} className={classes.join(" ")} style={style}
-         onMouseDown={onComponentMouseDown} onMouseEnter={onComponentMouseEnter} onMouseLeave={onComponentMouseLeave}>
+    <div {...component_props} ref={ref_container} className={classes.join(" ")} style={style} tabIndex={tabIndex}
+         onKeyDown={onComponentKeyDown} onMouseDown={onComponentMouseDown} onMouseEnter={onComponentMouseEnter} onMouseLeave={onComponentMouseLeave}>
       {props.children}
     </div>
   );
 
+  function onComponentKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
+    onKeyDown?.(event);
+    const {ctrlKey, shiftKey, defaultPrevented} = event;
+    if (defaultPrevented || !ref_container.current?.children.length) return;
+
+    const focus_element = ref_container.current.children.item(internal_focus);
+    if (!focus_element) throw new Error("No focus element could not be found.");
+
+    const focus_rect = focus_element.getBoundingClientRect();
+    const focus_center = Rect.getCenterPoint(focus_rect);
+    const focus_selection_rect = Utility.getFocusSelectionRect(focus_rect, event.code);
+    if (!focus_selection_rect) return;
+
+    event.preventDefault();
+    const selection = internal_selection.slice(0, ref_container.current.children.length);
+    const focus = {element: focus_element, distance: shiftKey ? -Infinity : Infinity, index: internal_focus};
+    const selection_rect = focus_selection_rect.clone();
+    if (ctrlKey && shiftKey) {
+      selection_rect.union(focus_selection_rect, ...Array.from(ref_container.current.children).reduce(
+        (result, value, index) => selection[index] ? [...result, value.getBoundingClientRect()] : result,
+        [] as SimpleRect[]
+      ));
+    }
+
+    for (let i = 0; i < ref_container.current.children.length; i++) {
+      const child = ref_container.current.children.item(i);
+      if (!child) {
+        selection[i] = false;
+      }
+      else if (child === focus_element) {
+        selection[i] = ctrlKey || shiftKey;
+      }
+      else {
+        const child_rect = child.getBoundingClientRect();
+        if (focus_selection_rect.intersectsRect(child_rect)) {
+          const distance = focus_center.getDistanceToPoint(Rect.getCenterPoint(child_rect));
+          if (!shiftKey && distance < focus.distance || shiftKey && distance > focus.distance) {
+            focus.element = child;
+            focus.distance = distance;
+            focus.index = i;
+          }
+        }
+        else {
+          selection[i] = false;
+        }
+      }
+    }
+    selection[focus.index] = true;
+    // else if (ctrlKey && !shiftKey) {
+    //   for (let i = 0; i < ref_container.current.children.length; i++) {
+    //     const child = ref_container.current.children.item(i);
+    //     if (child && child !== focus_element) {
+    //       const child_rect = child.getBoundingClientRect();
+    //       if (focus_selection_rect.intersectsRect(child_rect)) {
+    //         const distance = focus_center.getDistanceToPoint(Rect.getCenterPoint(child_rect));
+    //         if (distance < focus.distance) {
+    //           focus.element = child;
+    //           focus.distance = distance;
+    //           focus.index = i;
+    //         }
+    //       }
+    //       else {
+    //         selection[i] = selection[i];
+    //       }
+    //     }
+    //     else {
+    //       selection[i] = selection[i];
+    //     }
+    //   }
+    //   selection[focus.index] = true;
+    // }
+    // else if (!ctrlKey && shiftKey) {
+    //   for (let i = 0; i < ref_container.current.children.length; i++) {
+    //     const child = ref_container.current.children.item(i);
+    //     if (!child) {
+    //       selection[i] = false;
+    //       continue;
+    //     }
+    //     if (child === focus_element) {
+    //       selection[i] = true;
+    //       continue;
+    //     }
+    //     if (child && child !== focus_element) {
+    //       const child_rect = child.getBoundingClientRect();
+    //       if (focus_selection_rect.intersectsRect(child_rect)) {
+    //         selection[i] = true;
+    //         const distance = focus_center.getDistanceToPoint(Rect.getCenterPoint(child_rect));
+    //         if (distance > focus.distance) {
+    //           focus.element = child;
+    //           focus.distance = distance;
+    //           focus.index = i;
+    //         }
+    //       }
+    //       else {
+    //         selection[i] = false;
+    //       }
+    //     }
+    //   }
+    //   selection[focus.index] = true;
+    // }
+    // else {
+    //   const rect_list = Array.from(ref_container.current.children).reduce((result, value, index) => selection[index] ? [...result, value.getBoundingClientRect()] : result, [] as SimpleRect[]);
+    //   const selection_rect = Rect.union(focus_selection_rect, ...rect_list);
+    //
+    //   for (let i = 0; i < ref_container.current.children.length; i++) {
+    //     const child = ref_container.current.children.item(i);
+    //
+    //     if (child && child !== focus_element) {
+    //       const child_rect = child.getBoundingClientRect();
+    //       if (focus_selection_rect.intersectsRect(child_rect)) {
+    //         selection[i] = true;
+    //         const distance = focus_center.getDistanceToPoint(Rect.getCenterPoint(child_rect));
+    //         if (distance > focus.distance) {
+    //           focus.element = child;
+    //           focus.distance = distance;
+    //           focus.index = i;
+    //         }
+    //       }
+    //       else {
+    //         selection[i] = selection[i] || selection_rect.intersectsRect(child_rect);
+    //       }
+    //     }
+    //     else {
+    //       selection[i] = selection[i];
+    //     }
+    //   }
+    //   selection[focus.index] = true;
+    // }
+
+    onCommit?.(selection);
+    setInternalFocus(focus.index);
+    setInternalSelection(selection);
+  }
+
   function onComponentMouseEnter(event: React.MouseEvent<HTMLDivElement>) {
-    if (ref_interval.current) cancelAnimationFrame(ref_interval.current.id);
+    cancelAnimationFrame(ref_interval_id.current);
     onMouseEnter?.(event);
     if (event.defaultPrevented) return;
   }
@@ -54,7 +191,8 @@ function ElementPicker(props: ElementPickerProps) {
     onMouseEnter?.(event);
     if (event.defaultPrevented || !ref_container.current || !ref_origin.current || !ref_point.current || !ref_rect.current) return;
     ref_scroll.current = new Point(0, 0);
-    ref_interval.current = {id: requestAnimationFrame(onInterval), elapsed: performance.now()};
+    ref_interval_id.current = requestAnimationFrame(onInterval);
+    ref_interval_offset.current = performance.now();
   }
 
   function onComponentMouseDown(event: React.MouseEvent<HTMLDivElement>) {
@@ -85,7 +223,7 @@ function ElementPicker(props: ElementPickerProps) {
     // If there is a rect, we're performing a drag selection
     if (ref_rect.current) {
       const rect = Utility.getRelativeRect(ref_container.current, ref_rect.current);
-      const selection = Utility.getSelection(ref_container.current.children, rect, ref_selection.current, ref_ctrl.current, ref_shift.current);
+      const selection = Utility.getDragSelection(ref_container.current.children, rect, ref_selection.current, ref_ctrl.current, ref_shift.current);
       commit(selection, rect);
     }
     // If there is a point but no rect, we're performing a click
@@ -107,7 +245,7 @@ function ElementPicker(props: ElementPickerProps) {
 
   function onInterval(elapsed: number) {
     if (!ref_container.current || !ref_origin.current || !ref_point.current || !ref_scroll.current) return removeListeners();
-    const updateRate = 1000 / (elapsed - ref_interval.current.elapsed);
+    const updateRate = 1000 / (elapsed - ref_interval_offset.current);
     const {current: scroll} = ref_scroll;
     const {scrollLeft, scrollWidth, clientWidth, scrollTop, scrollHeight, clientHeight} = ref_container.current;
     const {left, top, width, height} = ref_container.current.getBoundingClientRect();
@@ -143,8 +281,8 @@ function ElementPicker(props: ElementPickerProps) {
       hover(Rect.fromPoints(ref_origin.current, Utility.getRelativePoint(ref_container.current, Point.translateByCoords(ref_point.current, sx, sy))));
     }
 
-    ref_interval.current.elapsed = elapsed;
-    ref_interval.current.id = requestAnimationFrame(onInterval);
+    ref_interval_id.current = requestAnimationFrame(onInterval);
+    ref_interval_offset.current = elapsed;
   }
 
   function hover(rect?: Rect) {
@@ -153,7 +291,7 @@ function ElementPicker(props: ElementPickerProps) {
     if (!ref_rect.current) return props.onHover?.();
 
     rect = Utility.getRelativeRect(ref_container.current, ref_rect.current);
-    const selection = Utility.getSelection(ref_container.current.children, rect, ref_selection.current, ref_ctrl.current, ref_shift.current);
+    const selection = Utility.getDragSelection(ref_container.current.children, rect, ref_selection.current, ref_ctrl.current, ref_shift.current);
     props.onHover?.(selection, rect);
   }
 
@@ -164,7 +302,7 @@ function ElementPicker(props: ElementPickerProps) {
   }
 
   function removeListeners() {
-    if (ref_interval.current) cancelAnimationFrame(ref_interval.current.id);
+    cancelAnimationFrame(ref_interval_id.current);
     window.removeEventListener("mousemove", onWindowMouseMove);
     window.removeEventListener("mouseup", onWindowMouseUp);
   }
@@ -188,6 +326,7 @@ type OmittedElementPickerBaseProps = "style"
 
 export interface ElementPickerProps extends ElementPickerBaseProps {
   config?: ElementPickerConfig;
+  focus?: number;
   selection?: boolean[];
   style?: React.CSSProperties & ElementPickerRectCSSProperties;
 

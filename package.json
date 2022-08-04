@@ -27,7 +27,7 @@
     "test:app": "next dev"
   },
   "dependencies":     {
-    "@noxy/geometry": "^0.1.6"
+    "@noxy/geometry": "^0.1.9"
   },
   "devDependencies":  {
     "@rollup/plugin-commonjs":          "^22.0.1",

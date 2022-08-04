@@ -6,6 +6,7 @@ import {ElementPicker} from "../src";
 
 const IndexPage: NextPage = () => {
   const element_list = Array(5).fill(undefined);
+  const [focus, setFocus] = useState<number>(0);
   const [hovered, setHovered] = useState<boolean[]>();
   const [selected, setSelected] = useState<boolean[]>();
 
