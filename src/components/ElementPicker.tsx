@@ -49,136 +49,44 @@ function ElementPicker(props: ElementPickerProps) {
 
   function onComponentKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
     onKeyDown?.(event);
-    const {ctrlKey, shiftKey, defaultPrevented} = event;
-    if (defaultPrevented || !ref_container.current?.children.length) return;
+    if (event.defaultPrevented || !ref_container.current?.children.length) return;
 
-    const focus_element = ref_container.current.children.item(internal_focus);
+    const focus_element = ref_container.current?.children.item(internal_focus);
     if (!focus_element) throw new Error("No focus element could not be found.");
 
     const focus_rect = focus_element.getBoundingClientRect();
     const focus_center = Rect.getCenterPoint(focus_rect);
-    const focus_selection_rect = Utility.getFocusSelectionRect(focus_rect, event.code);
+    const focus_selection_rect = Utility.getFocusSelectionRect(ref_container.current, focus_rect, event.code);
     if (!focus_selection_rect) return;
-
     event.preventDefault();
-    const selection = internal_selection.slice(0, ref_container.current.children.length);
-    const focus = {element: focus_element, distance: shiftKey ? -Infinity : Infinity, index: internal_focus};
-    const selection_rect = focus_selection_rect.clone();
-    if (ctrlKey && shiftKey) {
-      selection_rect.union(focus_selection_rect, ...Array.from(ref_container.current.children).reduce(
-        (result, value, index) => selection[index] ? [...result, value.getBoundingClientRect()] : result,
-        [] as SimpleRect[]
-      ));
-    }
 
-    for (let i = 0; i < ref_container.current.children.length; i++) {
-      const child = ref_container.current.children.item(i);
-      if (!child) {
-        selection[i] = false;
-      }
-      else if (child === focus_element) {
-        selection[i] = ctrlKey || shiftKey;
-      }
-      else {
-        const child_rect = child.getBoundingClientRect();
-        if (focus_selection_rect.intersectsRect(child_rect)) {
-          const distance = focus_center.getDistanceToPoint(Rect.getCenterPoint(child_rect));
-          if (!shiftKey && distance < focus.distance || shiftKey && distance > focus.distance) {
-            focus.element = child;
-            focus.distance = distance;
-            focus.index = i;
-          }
-        }
-        else {
-          selection[i] = false;
+    const focus = {element: focus_element, distance: event.shiftKey ? -Infinity : Infinity, index: internal_focus, rect: focus_rect};
+    for (let i = 0; i < ref_container.current?.children.length; i++) {
+      const child = ref_container.current?.children.item(i);
+      if (!child || child === focus_element) continue;
+
+      const child_rect = child.getBoundingClientRect();
+      if (focus_selection_rect.intersectsRect(child_rect)) {
+        const distance = focus_center.getDistanceToPoint(Rect.getCenterPoint(child_rect));
+        if (!event.shiftKey && distance < focus.distance || event.shiftKey && distance > focus.distance) {
+          focus.element = child;
+          focus.rect = child_rect;
+          focus.index = i;
+          focus.distance = distance;
         }
       }
     }
-    selection[focus.index] = true;
-    // else if (ctrlKey && !shiftKey) {
-    //   for (let i = 0; i < ref_container.current.children.length; i++) {
-    //     const child = ref_container.current.children.item(i);
-    //     if (child && child !== focus_element) {
-    //       const child_rect = child.getBoundingClientRect();
-    //       if (focus_selection_rect.intersectsRect(child_rect)) {
-    //         const distance = focus_center.getDistanceToPoint(Rect.getCenterPoint(child_rect));
-    //         if (distance < focus.distance) {
-    //           focus.element = child;
-    //           focus.distance = distance;
-    //           focus.index = i;
-    //         }
-    //       }
-    //       else {
-    //         selection[i] = selection[i];
-    //       }
-    //     }
-    //     else {
-    //       selection[i] = selection[i];
-    //     }
-    //   }
-    //   selection[focus.index] = true;
-    // }
-    // else if (!ctrlKey && shiftKey) {
-    //   for (let i = 0; i < ref_container.current.children.length; i++) {
-    //     const child = ref_container.current.children.item(i);
-    //     if (!child) {
-    //       selection[i] = false;
-    //       continue;
-    //     }
-    //     if (child === focus_element) {
-    //       selection[i] = true;
-    //       continue;
-    //     }
-    //     if (child && child !== focus_element) {
-    //       const child_rect = child.getBoundingClientRect();
-    //       if (focus_selection_rect.intersectsRect(child_rect)) {
-    //         selection[i] = true;
-    //         const distance = focus_center.getDistanceToPoint(Rect.getCenterPoint(child_rect));
-    //         if (distance > focus.distance) {
-    //           focus.element = child;
-    //           focus.distance = distance;
-    //           focus.index = i;
-    //         }
-    //       }
-    //       else {
-    //         selection[i] = false;
-    //       }
-    //     }
-    //   }
-    //   selection[focus.index] = true;
-    // }
-    // else {
-    //   const rect_list = Array.from(ref_container.current.children).reduce((result, value, index) => selection[index] ? [...result, value.getBoundingClientRect()] : result, [] as SimpleRect[]);
-    //   const selection_rect = Rect.union(focus_selection_rect, ...rect_list);
-    //
-    //   for (let i = 0; i < ref_container.current.children.length; i++) {
-    //     const child = ref_container.current.children.item(i);
-    //
-    //     if (child && child !== focus_element) {
-    //       const child_rect = child.getBoundingClientRect();
-    //       if (focus_selection_rect.intersectsRect(child_rect)) {
-    //         selection[i] = true;
-    //         const distance = focus_center.getDistanceToPoint(Rect.getCenterPoint(child_rect));
-    //         if (distance > focus.distance) {
-    //           focus.element = child;
-    //           focus.distance = distance;
-    //           focus.index = i;
-    //         }
-    //       }
-    //       else {
-    //         selection[i] = selection[i] || selection_rect.intersectsRect(child_rect);
-    //       }
-    //     }
-    //     else {
-    //       selection[i] = selection[i];
-    //     }
-    //   }
-    //   selection[focus.index] = true;
-    // }
 
-    onCommit?.(selection);
-    setInternalFocus(focus.index);
-    setInternalSelection(selection);
+    const child_list = Array.from(ref_container.current?.children).map(child => child.getBoundingClientRect());
+    const selection_rect = Rect.fromSimpleRect(focus.rect);
+    if (event.shiftKey) {
+      selection_rect.union(focus_rect);
+      if (event.ctrlKey) {
+        selection_rect.union(...child_list.reduce((r, c, i) => internal_selection[i] ? [...r, c] : r, [] as SimpleRect[]));
+      }
+    }
+    const selection = child_list.map((rect, i) => (event.ctrlKey && internal_selection[i]) || selection_rect.intersectsRect(rect));
+    return commit(selection, focus.index);
   }
 
   function onComponentMouseEnter(event: React.MouseEvent<HTMLDivElement>) {
@@ -218,19 +126,21 @@ function ElementPicker(props: ElementPickerProps) {
 
   function onWindowMouseUp() {
     removeListeners();
-    if (!ref_container.current) return;
+    if (!ref_container.current || !ref_origin.current) return;
 
     // If there is a rect, we're performing a drag selection
     if (ref_rect.current) {
       const rect = Utility.getRelativeRect(ref_container.current, ref_rect.current);
       const selection = Utility.getDragSelection(ref_container.current.children, rect, ref_selection.current, ref_ctrl.current, ref_shift.current);
-      commit(selection, rect);
+      const focus = Utility.getFocus(ref_container.current, ref_origin.current) ?? internal_focus;
+      commit(selection, focus);
     }
     // If there is a point but no rect, we're performing a click
     else if (ref_origin.current) {
       const rect = Utility.getRelativeRect(ref_container.current, new Rect(ref_origin.current.x, ref_origin.current.y, 0, 0));
       const selection = Utility.getClickSelection(ref_container.current.children, rect, ref_selection.current, ref_ctrl.current, ref_shift.current);
-      commit(selection, rect);
+      const focus = Utility.getFocus(ref_container.current, ref_origin.current) ?? internal_focus;
+      commit(selection, focus);
     }
 
     hover();
@@ -287,18 +197,19 @@ function ElementPicker(props: ElementPickerProps) {
 
   function hover(rect?: Rect) {
     setSelectionRect(ref_rect.current = rect);
-    if (!props.onHover || !ref_container.current) return;
+    if (!props.onHover || !ref_container.current || !ref_origin.current) return;
     if (!ref_rect.current) return props.onHover?.();
 
     rect = Utility.getRelativeRect(ref_container.current, ref_rect.current);
     const selection = Utility.getDragSelection(ref_container.current.children, rect, ref_selection.current, ref_ctrl.current, ref_shift.current);
-    props.onHover?.(selection, rect);
+    props.onHover?.(selection);
   }
 
-  function commit(current_selection: boolean[], rect?: Rect) {
+  function commit(current_selection: boolean[], focus: number) {
     ref_selection.current = current_selection;
+    setInternalFocus(focus);
     setInternalSelection(current_selection);
-    onCommit?.(current_selection, rect);
+    onCommit?.(current_selection, focus);
   }
 
   function removeListeners() {
@@ -330,8 +241,8 @@ export interface ElementPickerProps extends ElementPickerBaseProps {
   selection?: boolean[];
   style?: React.CSSProperties & ElementPickerRectCSSProperties;
 
-  onHover?(values?: boolean[], rect?: Rect): void;
-  onCommit?(values: boolean[], rect?: Rect): void;
+  onHover?(values?: boolean[]): void;
+  onCommit?(values: boolean[], focus: number): void;
 }
 
 export default ElementPicker;

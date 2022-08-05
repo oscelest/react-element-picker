@@ -1,5 +1,5 @@
 import React from "react";
-import {Point, Rect, SimpleRect, SimplePoint, TransformationOrigin} from "@noxy/geometry";
+import {Point, Rect, SimpleRect, SimplePoint} from "@noxy/geometry";
 
 module Utility {
 
@@ -21,64 +21,37 @@ module Utility {
     return Rect.translateByCoords(rect, left + clientLeft - scrollLeft, top + clientTop - scrollTop);
   }
 
-  export function getFocusSelectionRect(rect: SimpleRect, code: string) {
+  export function getFocusSelectionRect<T extends HTMLElement>(container: T, rect: SimpleRect, code: string) {
     switch (code) {
       case "ArrowUp":
-        return new Rect(rect.x, 0, rect.width, rect.y + rect.height);
+        return new Rect(rect.x, -container.scrollTop, rect.width, rect.y + rect.height);
       case "ArrowDown":
         return new Rect(rect.x, rect.y, rect.width, Infinity);
       case "ArrowLeft":
-        return new Rect(0, rect.y, rect.x + rect.width, rect.height);
+        return new Rect(-container.scrollLeft, rect.y, rect.x + rect.width, rect.height);
       case "ArrowRight":
         return new Rect(rect.x, rect.y, Infinity, rect.height);
     }
   }
 
-  // export function getCursorSelectionAndFocus<T extends HTMLElement>(container: T, focus_element: Element, rect: SimpleRect, selection: boolean[], ctrl: boolean, shift: boolean) {
-  //
-  //
-  //   selection = selection.slice(0, children.length);
-  //
-  //   const focus = {element: focus_element, distance: shift ? -Infinity : Infinity};
-  //   const center = Rect.getCenterPoint(focus_element.getBoundingClientRect());
-  //
-  //   const focus_rect = rect;
-  //   const selection_rect = rect.clone();
-  //
-  //   // if (ctrl && shift) {
-  //   //   selection_rect.union(...Array.from(children).reduce(
-  //   //     (result, child, index) => selection[index] ? [...result, child.getBoundingClientRect()] : result,
-  //   //     [] as SimpleRect[]
-  //   //   ));
-  //   // }
-  //
-  //   for (let i = 0; i < children.length; i++) {
-  //     const child = children.item(i);
-  //     if (!child) {
-  //       selection[i] = false;
-  //       continue;
-  //     }
-  //
-  //     const child_rect = child.getBoundingClientRect();
-  //     selection[i] = (ctrl && selection[i]) || selection_rect.intersectsRect(child_rect);
-  //
-  //     if (child !== focus_element && focus_rect.intersectsRect(child_rect)) {
-  //       const distance = center.getDistanceToPoint(Rect.getCenterPoint(child.getBoundingClientRect()));
-  //
-  //       if (!shift && distance < focus.distance) {
-  //         focus.element = child;
-  //         focus.distance = distance;
-  //       }
-  //
-  //       if (shift && distance > focus.distance) {
-  //         focus.element = child;
-  //         focus.distance = distance;
-  //       }
-  //     }
-  //   }
-  //
-  //   return {focus: focus.element, selection};
-  // }
+  export function getFocus<T extends HTMLElement>(container: T, point: Point) {
+    point.translateByCoords(-container.scrollLeft, -container.scrollTop)
+    const focus = {distance: Infinity, index: undefined as number | undefined};
+    for (let i = 0; i < container.children.length; i++) {
+      const child = container.children.item(i);
+      if (!child) continue;
+      const rect = Rect.fromSimpleRect(child.getBoundingClientRect());
+      if (rect.containsPoint(point)) {
+        const distance = point.getDistanceToPoint(rect.getCenterPoint());
+        if (distance < focus.distance) {
+          focus.distance = distance;
+          focus.index = i;
+        }
+      }
+    }
+
+    return focus.index;
+  }
 
   export function getClickSelection(children: HTMLCollection, rect: Rect, selection: boolean[], ctrl: boolean, shift: boolean) {
     selection = selection.slice(0, children.length);
@@ -100,6 +73,7 @@ module Utility {
 
   export function getDragSelection(children: HTMLCollection, rect: Rect, selection: boolean[], ctrl: boolean, shift: boolean) {
     selection = selection.slice(0, children.length);
+
     for (let i = 0; i < children.length; i++) {
       const child = children.item(i);
       const select = selection[i];
