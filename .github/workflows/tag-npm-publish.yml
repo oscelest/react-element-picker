@@ -1,0 +1,58 @@
+name: Publish NPM package on Tag
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  get-version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.get.outputs.version }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Get version from tag
+        id: get
+        run: echo "::set-output name=version::$(echo $GITHUB_REF | sed -s 's/.*\([0-9]\+\.[0-9]\+\.[0-9]\+\).*/\1/')"
+
+  publish-npm:
+    needs: get-version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '16.x'
+          registry-url: https://registry.npmjs.org/
+      - run: npm ci
+      - run: npm run build
+      - run: npm version ${{ needs.get-version.outputs.version }} --no-git-tag-version --silent
+      - run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
+
+  update-version:
+    needs: [ get-version, publish-npm ]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up GitHub Actions Bot
+        run: |
+          git config user.name "GitHub Actions Bot"
+          git config user.email "<>"
+
+      - name: Apply version
+        run: npm version ${{ needs.get-version.outputs.version }} --no-git-tag-version
+
+      - name: Add updated package.json to commit
+        run: git add package.json
+
+      - name: Commit changes to main branch
+        run: git commit -m "Updating version to ${{ needs.get-version.outputs.version }}"
+
+      - name: Pull from main
+        run: git pull origin main
+
+      - name: Push code to master
+        run: git push origin HEAD:main
