@@ -1,7 +1,7 @@
 {
   "name": "@noxy/react-element-picker",
   "author": "oscelest",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A tool for turning elements inside a container selectable in a file explorer style.",
   "license": "MIT",
   "repository": {
