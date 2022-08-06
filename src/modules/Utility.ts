@@ -44,7 +44,6 @@ module Utility {
       const child = container.children.item(i);
       if (!child) continue;
       const rect = Rect.fromSimpleRect(child.getBoundingClientRect());
-      console.log(child.getBoundingClientRect());
       if (rect.containsPoint(point)) {
         const distance = point.getDistanceToPoint(rect.getCenterPoint());
         if (distance < focus.distance) {
