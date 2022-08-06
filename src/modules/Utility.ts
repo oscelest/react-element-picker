@@ -35,12 +35,16 @@ module Utility {
   }
 
   export function getFocus<T extends HTMLElement>(container: T, point: Point) {
-    point.translateByCoords(-container.scrollLeft, -container.scrollTop)
     const focus = {distance: Infinity, index: undefined as number | undefined};
+    const {scrollLeft, scrollTop, clientLeft, clientTop} = container;
+    const {left, top} = container.getBoundingClientRect();
+    point.translateByCoords(left + clientLeft - scrollLeft, top + clientTop - scrollTop)
+
     for (let i = 0; i < container.children.length; i++) {
       const child = container.children.item(i);
       if (!child) continue;
       const rect = Rect.fromSimpleRect(child.getBoundingClientRect());
+      console.log(child.getBoundingClientRect());
       if (rect.containsPoint(point)) {
         const distance = point.getDistanceToPoint(rect.getCenterPoint());
         if (distance < focus.distance) {
