@@ -31,6 +31,8 @@ module Utility {
         return new Rect(-container.scrollLeft, rect.y, rect.x + rect.width, rect.height);
       case "ArrowRight":
         return new Rect(rect.x, rect.y, Infinity, rect.height);
+      default:
+        return undefined;
     }
   }
 
@@ -82,26 +84,26 @@ module Utility {
       const select = selection[i];
       const hover = !!child && rect.intersectsRect(child.getBoundingClientRect());
 
-      // |---------------------------------------|
-      // | Select  | Hover | Ctrl  | Shift | Res | (select && !hover && ctrl) ||
-      // |---------------------------------|-----| (select && !hover && shift) ||
-      // |    F    |   F   |   F   |   F   |  F  | (!select && hover && !shift) ||
-      // |    F    |   F   |   F   |   T   |  F  | (hover && !ctrl)
-      // |    F    |   F   |   T   |   F   |  F  |
-      // |    F    |   F   |   T   |   T   |  F  |
-      // |    F    |   T   |   F   |   F   |  T  |
-      // |    F    |   T   |   F   |   T   |  T  |
-      // |    F    |   T   |   T   |   F   |  T  |
-      // |    F    |   T   |   T   |   T   |  F  |
-      // |    T    |   F   |   F   |   F   |  F  |
-      // |    T    |   F   |   F   |   T   |  T  |
-      // |    T    |   F   |   T   |   F   |  T  |
-      // |    T    |   F   |   T   |   T   |  T  |
-      // |    T    |   T   |   F   |   F   |  T  |
-      // |    T    |   T   |   F   |   T   |  T  |
-      // |    T    |   T   |   T   |   F   |  F  |
-      // |    T    |   T   |   T   |   T   |  F  |
-      // |---------------------------------------|
+      // |-------------------------------------------|
+      // | Select  | Hover | Ctrl  | Shift | Result  | (select && !hover && ctrl) ||
+      // |---------------------------------|---------| (select && !hover && shift) ||
+      // |    F    |   F   |   F   |   F   |    F    | (!select && hover && !shift) ||
+      // |    F    |   F   |   F   |   T   |    F    | (hover && !ctrl)
+      // |    F    |   F   |   T   |   F   |    F    |
+      // |    F    |   F   |   T   |   T   |    F    |
+      // |    F    |   T   |   F   |   F   |    T    |
+      // |    F    |   T   |   F   |   T   |    T    |
+      // |    F    |   T   |   T   |   F   |    T    |
+      // |    F    |   T   |   T   |   T   |    F    |
+      // |    T    |   F   |   F   |   F   |    F    |
+      // |    T    |   F   |   F   |   T   |    T    |
+      // |    T    |   F   |   T   |   F   |    T    |
+      // |    T    |   F   |   T   |   T   |    T    |
+      // |    T    |   T   |   F   |   F   |    T    |
+      // |    T    |   T   |   F   |   T   |    T    |
+      // |    T    |   T   |   T   |   F   |    F    |
+      // |    T    |   T   |   T   |   T   |    F    |
+      // |-------------------------------------------|
       selection[i] = (select && !hover && ctrl && !shift) || (select && !ctrl && shift) || (!select && hover && !shift) || (hover && !ctrl);
     }
     return selection;
