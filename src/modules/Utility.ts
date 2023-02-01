@@ -3,6 +3,11 @@ import {Point, Rect, SimpleRect, SimplePoint} from "@noxy/geometry";
 
 module Utility {
 
+  export function resolveEvent<E extends React.SyntheticEvent>(event: E, handler?: React.EventHandler<E>, condition?: boolean): boolean {
+    handler?.(event);
+    return !event.defaultPrevented && condition;
+  }
+  
   export function getPointFromEvent(event: React.MouseEvent | MouseEvent) {
     return new Point(event.pageX, event.pageY);
   }
@@ -58,32 +63,23 @@ module Utility {
     return focus.index;
   }
 
-  export function getClickSelection(children: HTMLCollection, rect: Rect, selection: boolean[], ctrl: boolean, shift: boolean) {
+  export function getClickSelection(children: Element[], rect: Rect, selection: boolean[], ctrl: boolean, shift: boolean) {
     selection = selection.slice(0, children.length);
+    
     if (shift) {
-      const rect_list = [] as SimpleRect[];
-      for (let i = 0; i < children.length; i++) {
-        if (!selection[i]) continue;
-
-        const child = children.item(i);
-        if (!child) continue;
-
-        rect_list.push(child.getBoundingClientRect());
-      }
-      rect = Rect.union(rect, ...rect_list);
+      rect = Rect.union(rect, ...children.reduce((result, child, index) => selection[index] ? [...result, child.getBoundingClientRect()] : result, [] as SimpleRect[]));
     }
 
     return getDragSelection(children, rect, selection, ctrl, shift);
   }
 
-  export function getDragSelection(children: HTMLCollection, rect: Rect, selection: boolean[], ctrl: boolean, shift: boolean) {
+  export function getDragSelection(children: Element[], rect: Rect, selection: boolean[], ctrl: boolean, shift: boolean) {
     selection = selection.slice(0, children.length);
 
-    for (let i = 0; i < children.length; i++) {
-      const child = children.item(i);
-      const select = selection[i];
+    return children.map((child, index) => {
+      const select = selection[index];
       const hover = !!child && rect.intersectsRect(child.getBoundingClientRect());
-
+      
       // |-------------------------------------------|
       // | Select  | Hover | Ctrl  | Shift | Result  | (select && !hover && ctrl) ||
       // |---------------------------------|---------| (select && !hover && shift) ||
@@ -104,9 +100,8 @@ module Utility {
       // |    T    |   T   |   T   |   F   |    F    |
       // |    T    |   T   |   T   |   T   |    F    |
       // |-------------------------------------------|
-      selection[i] = (select && !hover && ctrl && !shift) || (select && !ctrl && shift) || (!select && hover && !shift) || (hover && !ctrl);
-    }
-    return selection;
+      return (select && !hover && ctrl && !shift) || (select && !ctrl && shift) || (!select && hover && !shift) || (hover && !ctrl);
+    })
   }
 
 }
