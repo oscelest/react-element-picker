@@ -1,11 +1,12 @@
 .Component:global(.element-picker) {
-  user-select: none;
+  user-select: none !important;
   overflow:    auto;
+  box-sizing:  border-box !important;
 }
 
 .Component :global(.element-picker-rect) {
-  position:   absolute;
-  box-sizing: border-box;
+  position:   absolute !important;
+  box-sizing: border-box !important;
   border:     1px solid rgba(0, 0, 0, 0.4);
   background: rgba(0, 0, 0, 0.2);
 }

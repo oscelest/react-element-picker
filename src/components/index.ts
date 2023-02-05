@@ -1,1 +1,1 @@
-export {default as ElementPicker, type ElementPickerProps} from "./ElementPicker";
+export * from "./ElementPicker";

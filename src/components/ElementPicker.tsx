@@ -5,7 +5,7 @@ import Style from "./ElementPicker.module.css";
 
 const keydown_list = ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"];
 
-function ElementPicker(props: ElementPickerProps) {
+export function ElementPicker(props: ElementPickerProps) {
   const {className, selection, focus, clickThreshold = 8, scrollSpeed = 2500, tabIndex, style, children, ...component_method_props} = props;
   const {onHover, onCommit, onKeyDown, onMouseDown, onMouseEnter, onMouseLeave, ...component_props} = component_method_props;
   
@@ -122,5 +122,3 @@ export interface ElementPickerProps extends HTMLComponentProps {
   onHover?(values?: boolean[]): void;
   onCommit(values: boolean[], focus: number): void;
 }
-
-export default ElementPicker;
