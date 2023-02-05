@@ -12,16 +12,16 @@ export default [
     input:   "src/index.ts",
     output:  [
       {
-        file:   "dist/cjs/index.js",
+        file:   Package.main,
         format: "cjs",
       },
       {
-        file:   "dist/esm/index.js",
+        file:   Package.module,
         format: "esm",
       },
       {
         name:    Package.name.replace(/^@noxy\//, ""),
-        file:    "dist/umd/index.js",
+        file:    Package.umd,
         format:  "umd",
         globals: {
           "react": "React",
@@ -32,7 +32,7 @@ export default [
       PeerDepsExternal(), // Ensure peer-dependencies are not included in the bundle.
       Resolve(),          // Resolve external libraries and adds them to the bundle.
       CommonJS(),
-      TypeScript({tsconfig: "./tsconfig.build.json"}),
+      TypeScript({tsconfig: "./tsconfig.build.json", outputToFilesystem: true}),
       PostCSS(),
       Terser({sourceMap: true}),
     ],
@@ -41,7 +41,7 @@ export default [
     input:    "dist/esm/types/index.d.ts",
     output:   [
       {
-        file:   "dist/types/index.d.ts",
+        file:   Package.types,
         format: "esm",
       },
     ],
