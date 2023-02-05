@@ -38,7 +38,7 @@ export default [
     ],
   },
   {
-    input:    "dist/esm/types/index.d.ts",
+    input:    "dist/esm/index.d.ts",
     output:   [
       {
         file:   Package.types,
