@@ -1,7 +1,7 @@
-.Component:global(.element-picker) {
+.Component {
+  box-sizing:  border-box !important;
   user-select: none !important;
   overflow:    auto;
-  box-sizing:  border-box !important;
 }
 
 .Component :global(.element-picker-rect) {
