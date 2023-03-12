@@ -29,12 +29,12 @@
   "dependencies":     {
     "@noxy/geometry": "^0.2.7"
   },
-  "devDependencies":  {
+  "devDependencies": {
     "@rollup/plugin-commonjs":          "^24.0.1",
     "@rollup/plugin-node-resolve":      "^15.0.1",
     "@rollup/plugin-terser":            "^0.4.0",
     "@rollup/plugin-typescript":        "^11.0.0",
-    "@types/node":                      "18.15.0",
+    "@types/node":                      "^18.15.0",
     "@types/react":                     "^18.0.28",
     "@types/react-dom":                 "^18.0.11",
     "next":                             "^13.2.4",
