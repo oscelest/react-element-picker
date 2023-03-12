@@ -1,15 +1,17 @@
 .Small {
-  width: 200px;
+  width:  200px;
   height: 200px;
   border: 2px solid #3629f9;
 }
+
 .Medium {
-  width: 300px;
+  width:  300px;
   height: 300px;
   border: 2px solid #0dc913;
 }
+
 .Large {
-  width: 400px;
+  width:  400px;
   height: 400px;
   border: 2px solid #e1810a;
 }
@@ -31,15 +33,15 @@
 }
 
 .ElementPicker {
-  display: flex;
-  flex: 0 0 auto;
-  flex-flow: row wrap;
-  grid-row-gap: 10px;
+  display:         flex;
+  flex:            0 0 auto;
+  flex-flow:       row wrap;
+  grid-row-gap:    10px;
   grid-column-gap: 10px;
-  width: 90%;
-  height: 500px;
-  position: relative;
-  padding: 10px;
-  margin: 10px auto;
-  border: 5px solid black;
+  width:           90%;
+  height:          500px;
+  position:        relative;
+  padding:         10px;
+  margin:          10px auto;
+  border:          5px solid black;
 }

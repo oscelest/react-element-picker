@@ -8,16 +8,16 @@ const IndexPage: NextPage = () => {
   const [focus, setFocus] = useState<number>(0);
   const [hovered, setHovered] = useState<boolean[]>();
   const [selected, setSelected] = useState<boolean[]>([]);
-
+  
   function onCommit(values: boolean[], focus: number) {
     setFocus(focus);
     setSelected(values);
   }
-
+  
   function onHover(values?: boolean[]) {
     setHovered(values);
   }
-
+  
   return (
     <ElementPicker className={Style.ElementPicker} focus={focus} selection={selected} onCommit={onCommit} onHover={onHover}>
       {element_list.map((value, index) => {
@@ -36,7 +36,7 @@ const IndexPage: NextPage = () => {
             className.push(Style.Hovered);
           }
         }
-
+  
         return (
           <div className={className.join(" ")} key={index}>{index}</div>
         );
